@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>CLUTCH ARENA 3D</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080d13;color:#edf7fb;font-family:Arial,system-ui,sans-serif}canvas{display:block}
+#hud{position:fixed;inset:0;pointer-events:none;text-shadow:0 2px 5px #000}
+.top{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;gap:24px;align-items:center;padding:9px 18px;background:#071019c9;border:1px solid #ffffff25;border-radius:8px;font-weight:900;letter-spacing:.1em}
+.blue{color:#62e8ef}.red{color:#ff9c65}#timer{font-variant-numeric:tabular-nums}
+#objective{position:absolute;top:66px;left:50%;transform:translateX(-50%);background:#071019c9;padding:7px 13px;border:1px solid #ffffff25;border-radius:6px;font-size:12px;letter-spacing:.12em;font-weight:bold}
+.left{position:absolute;bottom:18px;left:18px;background:#071019cf;border:1px solid #ffffff25;border-radius:8px;padding:10px 14px;min-width:150px}
+.right{position:absolute;bottom:18px;right:18px;text-align:right;background:#071019cf;border:1px solid #ffffff25;border-radius:8px;padding:10px 14px}
+.label{font-size:10px;letter-spacing:.15em;color:#9bb0bd}.big{font-size:26px;font-weight:900}.small{font-size:12px;color:#bdcbd3}
+#cross{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:25px;color:#e9ffff;opacity:.85}
+#hit{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:27px;color:#ffcf8a;opacity:0}
+#feed{position:absolute;right:18px;top:85px;text-align:right;font-size:12px;color:#d5e2e8}
+#notice{position:absolute;top:28%;left:50%;transform:translateX(-50%);font-weight:900;font-size:28px;letter-spacing:.12em;text-align:center}
+#menu,#pause{position:fixed;inset:0;z-index:5;display:grid;place-items:center;background:linear-gradient(120deg,#06101df2,#122333ed)}
+.panel{width:min(650px,93vw);padding:28px;background:#091521;border:1px solid #62e8ef66;border-radius:14px;box-shadow:0 25px 90px #000b}
+h1{font-size:clamp(36px,8vw,62px);line-height:.9;margin:7px 0 12px;letter-spacing:-.06em}h1 span{color:#62e8ef}
+.muted{color:#9aafbc;font-size:13px;line-height:1.5}.buttons{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}
+button{background:#172a3a;color:#edfaff;border:1px solid #ffffff35;border-radius:7px;padding:12px 16px;font-weight:900;letter-spacing:.08em;cursor:pointer}
+button.primary{background:#62e8ef;color:#061318;border-color:#62e8ef;flex:1}
+button:hover{filter:brightness(1.15)}
+#pause{display:none;background:#050b12bb}
+#pause .panel{width:min(420px,90vw);text-align:center}
+#weaponList{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:12px}
+.weapon{padding:8px;background:#122332;border:1px solid #ffffff20;border-radius:5px;font-size:11px;color:#c8d8e1}
+.weapon b{display:block;color:#62e8ef;margin-bottom:3px}
+#mobile{display:none;position:fixed;inset:0;pointer-events:none}
+.touch{pointer-events:auto;position:absolute;border-radius:50%;background:#142a3dbb;border:1px solid #ffffff55;color:white;width:58px;height:58px;font-weight:bold}
+#stick{left:22px;bottom:25px;width:120px;height:120px;border-radius:50%}
+#fire{right:24px;bottom:38px;width:78px;height:78px;background:#8c3d30bb}
+#jump{right:110px;bottom:30px}
+@media(pointer:coarse){#mobile{display:block}.top{top:7px;gap:10px;font-size:11px}.right{bottom:10px;right:8px}.left{bottom:10px;left:8px}}
+</style>
+</head>
+<body>
+<div id="menu"><div class="panel">
+<div class="muted">CLUTCH STUDIOS PRESENTS · 3D ARENA COMBAT</div>
+<h1>CLUTCH <span>ARENA</span></h1>
+<p class="muted">A 3D browser-based team arena shooter. Fight training bots, swap your loadout and control the central objective. This is a single-player prototype; online multiplayer is not included.</p>
+<div class="buttons"><button class="primary" id="start">DEPLOY</button><button id="controls">CONTROLS</button></div>
+<div class="muted" id="help">WASD move · Mouse aim · Click fire · R reload · 1–6 switch weapon · Shift sprint · C crouch · Space jump · Esc pause</div>
+<div id="weaponList">
+<div class="weapon"><b>VANGUARD</b>Rifle</div><div class="weapon"><b>RIPTIDE</b>SMG</div><div class="weapon"><b>BREACH</b>Shotgun</div>
+<div class="weapon"><b>LONGSHOT</b>Precision</div><div class="weapon"><b>SIDEKICK</b>Pistol</div><div class="weapon"><b>ARC</b>Energy carbine</div>
+</div>
+</div></div>
+<div id="pause"><div class="panel"><h1>PAUSED</h1><p class="muted">The arena is on hold.</p><button class="primary" id="resume">RESUME</button><button id="restart">RESTART</button></div></div>
+<div id="hud">
+<div class="top"><span class="blue">BLUE <b id="bs">0</b></span><span id="timer">03:00</span><span class="red">ORANGE <b id="rs">0</b></span></div>
+<div id="objective">CONTROL THE CENTRAL ZONE</div><div id="cross">+</div><div id="hit">×</div><div id="feed"></div><div id="notice"></div>
+<div class="left"><div class="label">VITALS</div><div class="big" id="health">100</div><div class="small">SHIELD <b id="shield">50</b></div></div>
+<div class="right"><div class="label" id="weaponName">VANGUARD</div><div class="big"><span id="ammo">30</span><span class="small"> / <span id="reserve">120</span></span></div><div class="small" id="mode">AUTO · RIFLE</div></div>
+</div>
+<div id="mobile"><button class="touch" id="fire">FIRE</button><button class="touch" id="jump">JUMP</button></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+let scene,camera,renderer,clock,player,gunGroup,raycaster,active=false,paused=false,ended=false;
+let enemies=[],shots=[],particles=[],keys={},weaponIndex=0,health=100,shield=50,blue=0,red=0,time=180,reloadTimer=0,fireTimer=0,jumpV=0,onGround=true,velocity=new THREE.Vector3(),yaw=0,pitch=0,scoreTimer=0,hitFlash=0;
+const weapons=[
+{name:'VANGUARD',type:'RIFLE',mag:30,reserve:120,rate:.105,damage:24,spread:.012,color:0x8ca7b8,auto:true},
+{name:'RIPTIDE',type:'SMG',mag:36,reserve:144,rate:.075,damage:15,spread:.025,color:0x61b9bd,auto:true},
+{name:'BREACH',type:'SHOTGUN',mag:8,reserve:40,rate:.65,damage:11,pellets:7,spread:.095,color:0xb88c63,auto:false},
+{name:'LONGSHOT',type:'PRECISION',mag:5,reserve:30,rate:.85,damage:85,spread:.002,color:0x8997a9,auto:false},
+{name:'SIDEKICK',type:'PISTOL',mag:15,reserve:75,rate:.22,damage:28,spread:.018,color:0x9dabb5,auto:false},
+{name:'ARC',type:'ENERGY',mag:24,reserve:96,rate:.13,damage:22,spread:.009,color:0x55e6ee,auto:true}
+];
+let ammo=weapons.map(w=>w.mag),reserve=weapons.map(w=>w.reserve);
+const mat=(color,rough=.75,metal=0)=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal});
+function box(x,y,z,sx,sy,sz,m,parent=scene){let o=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
+function sphere(x,y,z,r,m,parent=scene){let o=new THREE.Mesh(new THREE.SphereGeometry(r,12,10),m);o.position.set(x,y,z);o.castShadow=true;parent.add(o);return o}
+function init(){
+ scene=new THREE.Scene();scene.background=new THREE.Color(0x9bb1bc);scene.fog=new THREE.Fog(0x9bb1bc,24,65);
+ camera=new THREE.PerspectiveCamera(76,innerWidth/innerHeight,.08,100);camera.position.set(0,1.65,9);
+ renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;document.body.prepend(renderer.domElement);
+ scene.add(new THREE.HemisphereLight(0xe4f4ff,0x53606a,2));
+ let sun=new THREE.DirectionalLight(0xffedcf,2.2);sun.position.set(-9,18,8);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-28;sun.shadow.camera.right=28;sun.shadow.camera.top=28;sun.shadow.camera.bottom=-28;scene.add(sun);
+ const floor=box(0,-.35,0,44,.7,44,mat(0x59646a));floor.receiveShadow=true;
+ const wallM=mat(0x52616a),trim=mat(0x263640),crateM=mat(0x796c59),metal=mat(0x42515a,.42,.6);
+ // Perimeter walls
+ box(0,2,-22,44,4,.8,wallM);box(0,2,22,44,4,.8,wallM);box(-22,2,0,.8,4,44,wallM);box(22,2,0,.8,4,44,wallM);
+ // Industrial architecture and cover
+ for(let i=-1;i<=1;i+=2){box(i*10,2,0,1,4,12,trim);box(0,2,i*10,12,4,1,trim)}
+ const crates=[[-7,-5,2,2,2],[-4,5,2,2,2],[7,5,2,2,2],[5,-6,2,2,2],[-12,8,3,2,2],[12,-8,3,2,2],[-1,-12,4,2,2],[1,12,4,2,2],[-14,-2,2,3,2],[14,2,2,3,2]];
+ crates.forEach(([x,z,w,h,d])=>{box(x,h/2,z,w,h,d,crateM);box(x,h+.04,z,w+.08,.12,d+.08,metal)});
+ // pillars / lights / floor markings
+ for(let x=-16;x<=16;x+=8)for(let z=-16;z<=16;z+=8){if(Math.abs(x)<5&&Math.abs(z)<5)continue;box(x,1.8,z,.6,3.6,.6,metal)}
+ const ring=new THREE.Mesh(new THREE.RingGeometry(3.8,4.1,64),new THREE.MeshBasicMaterial({color:0x54dfe8,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=.02;scene.add(ring);
+ let center= new THREE.Mesh(new THREE.CylinderGeometry(3.8,3.8,.04,48),mat(0x34484d));center.position.y=-.02;scene.add(center);
+ for(let a=0;a<4;a++){let ang=a*Math.PI/2;box(Math.cos(ang)*4.7,.05,Math.sin(ang)*4.7,1.5,.08,.12,mat(0x56d9df))}
+ // Weapon in first person
+ gunGroup=new THREE.Group();camera.add(gunGroup);scene.add(camera);buildGun();
+ raycaster=new THREE.Raycaster();clock=new THREE.Clock();
+ for(let i=0;i<6;i++)spawnEnemy(i);
+ addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+}
+function buildGun(){
+ gunGroup.clear();let w=weapons[weaponIndex],body=mat(w.color,.35,.65),dark=mat(0x17232c,.4,.55),accent=mat(w.color,.25,.4);
+ let scale=w.type==='SHOTGUN'?1.18:w.type==='PRECISION'?1.3:1;
+ box(.34,-.28,-.72,.19*scale,.18,.7*scale,body,gunGroup);
+ box(.34,-.24,-1.14,.07,.065,.62*scale,dark,gunGroup);
+ box(.34,-.39,-.48,.13,.25,.2,dark,gunGroup);
+ box(.34,-.15,-.64,.1,.055,.25,accent,gunGroup);
+ box(.34,-.2,-.32,.12,.09,.18,dark,gunGroup);
+ gunGroup.position.set(.02,-.02,0);
+}
+function spawnEnemy(i){
+ const group=new THREE.Group(),team=mat(0xb85c3d),dark=mat(0x303c46),skin=mat(0xc59a78);
+ let torso=box(0,1.05,0,.62,.82,.34,team,group);box(0,1.65,0,.42,.42,.4,skin,group);box(0,1.78,-.02,.48,.17,.45,dark,group);
+ box(-.4,1.05,0,.2,.65,.22,dark,group);box(.4,1.05,0,.2,.65,.22,dark,group);box(-.17,.38,0,.22,.65,.25,dark,group);box(.17,.38,0,.22,.65,.25,dark,group);
+ const gun=box(.43,1.05,-.35,.13,.12,.62,mat(0x263b48,.4,.6),group);
+ group.position.set((i%3-1)*12,0,-(i<3?14:-14));group.userData={hp:100,alive:true,shoot:1+Math.random()*1.5,walk:Math.random()*5,team:2,hit:0};scene.add(group);enemies.push(group);
+}
+function equip(i){weaponIndex=(i+weapons.length)%weapons.length;buildGun();updateHud()}
+function updateHud(){$('health').textContent=Math.max(0,Math.ceil(health));$('shield').textContent=Math.ceil(shield);$('weaponName').textContent=weapons[weaponIndex].name;$('ammo').textContent=ammo[weaponIndex];$('reserve').textContent=reserve[weaponIndex];$('mode').textContent=weapons[weaponIndex].type+' · '+(weapons[weaponIndex].auto?'AUTO':'SEMI')}
+function reload(){let w=weapons[weaponIndex];if(reloadTimer>0||ammo[weaponIndex]===w.mag||reserve[weaponIndex]<=0)return;reloadTimer=w.type==='SHOTGUN'?1.45:1.25;$('notice').textContent='RELOADING';}
+function shoot(){
+ let w=weapons[weaponIndex];if(fireTimer>0||reloadTimer>0)return;if(ammo[weaponIndex]<=0){reload();return}
+ ammo[weaponIndex]--;fireTimer=w.rate;gunGroup.position.z=.12;gunGroup.rotation.x=-.035;
+ const count=w.pellets||1;
+ for(let i=0;i<count;i++){
+  let dir=new THREE.Vector3((Math.random()-.5)*w.spread,(Math.random()-.5)*w.spread,-1).normalize();dir.applyQuaternion(camera.quaternion);
+  raycaster.set(camera.position,dir);raycaster.far=55;
+  let hits=raycaster.intersectObjects(enemies.filter(e=>e.userData.alive).map(e=>e.children[0]),false);
+  if(hits.length){let obj=hits[0].object,enemy=obj.parent;enemy.userData.hp-=w.damage;enemy.userData.hit=.12;$('hit').style.opacity=1;setTimeout(()=>$('hit').style.opacity=0,100);
+   if(enemy.userData.hp<=0){enemy.userData.alive=false;scene.remove(enemy);blue+=1;$('feed').innerHTML='YOU  <span style="color:#62e8ef">◆</span> BOT<br>'+ $('feed').innerHTML;setTimeout(()=>spawnEnemy(Math.floor(Math.random()*6)),3500)}
+  }
+ }
+ updateHud();
+}
+function enemyAI(dt){
+ for(let e of enemies){if(!e.userData.alive)continue;let p=e.position,dx=camera.position.x-p.x,dz=camera.position.z-p.z,dist=Math.hypot(dx,dz);e.userData.walk+=dt;
+  if(dist>5){let speed=dist>13?2.2:1.1;p.x+=dx/dist*speed*dt;p.z+=dz/dist*speed*dt}
+  e.rotation.y=Math.atan2(-dx,-dz);
+  e.userData.shoot-=dt;if(dist<22&&e.userData.shoot<=0){e.userData.shoot=1.25+Math.random()*1.2;if(Math.random()<Math.max(.12,.58-dist*.018)){let dmg=8+Math.random()*6;if(shield>0){let n=Math.min(shield,dmg);shield-=n;dmg-=n}health-=dmg;updateHud();$('notice').textContent='';if(health<=0)finish(false)}}
+ }
+}
+function update(dt){
+ if(!active||paused)return;
+ time-=dt;if(time<=0){finish(blue>=red);return}
+ fireTimer=Math.max(0,fireTimer-dt);reloadTimer=Math.max(0,reloadTimer-dt);if(reloadTimer===0&&$('notice').textContent==='RELOADING'){$('notice').textContent=''}
+ if(gunGroup.position.z>0){gunGroup.position.z=Math.max(0,gunGroup.position.z-dt*1.5);gunGroup.rotation.x*=.8}
+ if(keys.KeyR)reload();
+ if(keys.Digit1)equip(0);if(keys.Digit2)equip(1);if(keys.Digit3)equip(2);if(keys.Digit4)equip(3);if(keys.Digit5)equip(4);if(keys.Digit6)equip(5);
+ let f=(keys.KeyW?1:0)-(keys.KeyS?1:0),s=(keys.KeyD?1:0)-(keys.KeyA?1:0),len=Math.hypot(f,s)||1,speed=keys.ShiftLeft?7.2:4.8;
+ if(keys.KeyC)speed*=.62;
+ let forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+ velocity.x=(forward.x*f+right.x*s)/len*speed;velocity.z=(forward.z*f+right.z*s)/len*speed;
+ let old=camera.position.clone();camera.position.x+=velocity.x*dt;camera.position.z+=velocity.z*dt;
+ // Basic collision against arena boundaries and cover blocks
+ camera.position.x=THREE.MathUtils.clamp(camera.position.x,-20,20);camera.position.z=THREE.MathUtils.clamp(camera.position.z,-20,20);
+ const obstacles=[[-7,-5,2,2],[-4,5,2,2],[7,5,2,2],[5,-6,2,2],[-12,8,3,2],[12,-8,3,2],[-1,-12,4,2],[1,12,4,2],[-14,-2,2,3],[14,2,2,3]];
+ for(let [x,z,w,d] of obstacles)if(Math.abs(camera.position.x-x)<w/2+.35&&Math.abs(camera.position.z-z)<d/2+.35){camera.position.x=old.x;camera.position.z=old.z;break}
+ if(keys.Space&&onGround){jumpV=5.5;onGround=false}jumpV-=13*dt;camera.position.y+=jumpV*dt;if(camera.position.y<1.65){camera.position.y=1.65;jumpV=0;onGround=true}
+ enemyAI(dt);
+ scoreTimer+=dt;if(scoreTimer>1){scoreTimer=0;let inside=Math.hypot(camera.position.x,camera.position.z)<4;if(inside)blue+=1;else red+=Math.random()<.3?1:0}
+ $('bs').textContent=Math.floor(blue);$('rs').textContent=Math.floor(red);$('timer').textContent=String(Math.floor(time/60)).padStart(2,'0')+':'+String(Math.floor(time%60)).padStart(2,'0');
+ updateHud();
+}
+function finish(win){active=false;ended=true;document.exitPointerLock?.();$('notice').textContent=win?'ROUND WON':'ROUND LOST';$('menu').style.display='grid';$('start').textContent='PLAY AGAIN'}
+function loop(){requestAnimationFrame(loop);let dt=Math.min(clock.getDelta(),.04);if(active&&!paused)update(dt);if(renderer)renderer.render(scene,camera)}
+function begin(){if(!scene)init();enemies.forEach(e=>scene.remove(e));enemies=[];health=100;shield=50;blue=red=0;time=180;ammo=weapons.map(w=>w.mag);reserve=weapons.map(w=>w.reserve);weaponIndex=0;buildGun();camera.position.set(0,1.65,9);yaw=0;pitch=0;camera.rotation.set(0,0,0);active=true;paused=false;ended=false;$('menu').style.display='none';$('pause').style.display='none';$('notice').textContent='';for(let i=0;i<6;i++)spawnEnemy(i);updateHud();renderer.domElement.requestPointerLock?.()}
+$('start').onclick=begin;$('controls').onclick=()=>{$('help').textContent='WASD move · Mouse aim · Left click fire · R reload · 1–6 switch weapon · Shift sprint · C crouch · Space jump · Esc pause'};
+$('resume').onclick=()=>{paused=false;$('pause').style.display='none';renderer.domElement.requestPointerLock?.()};
+$('restart').onclick=begin;
+document.addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='Escape'&&active){paused=!paused;$('pause').style.display=paused?'grid':'none';if(paused)document.exitPointerLock?.();else renderer.domElement.requestPointerLock?.()}});
+document.addEventListener('keyup',e=>keys[e.code]=false);
+document.addEventListener('mousemove',e=>{if(document.pointerLockElement===renderer?.domElement&&!paused){yaw-=e.movementX*.0022;pitch-=e.movementY*.0022;pitch=THREE.MathUtils.clamp(pitch,-1.35,1.35);camera.rotation.order='YXZ';camera.rotation.y=yaw;camera.rotation.x=pitch}});
+document.addEventListener('mousedown',e=>{if(e.button===0&&active&&!paused){if(document.pointerLockElement!==renderer.domElement)renderer.domElement.requestPointerLock?.();else shoot()}});
+document.addEventListener('mouseup',()=>{});
+$('fire').addEventListener('touchstart',e=>{e.preventDefault();if(active)shoot()});
+$('jump').addEventListener('touchstart',e=>{e.preventDefault();keys.Space=true;setTimeout(()=>keys.Space=false,150)});
+init();loop();
+})();
+</script>
+</body></html>
